@@ -1,6 +1,6 @@
-use serde::{Serialize, Deserialize};
+use anyhow::{anyhow, Result};
+use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
-use anyhow::{Result, anyhow};
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub enum ParaCategory {
@@ -27,14 +27,14 @@ impl Vault {
         if !root.is_dir() {
             return Err(anyhow!("Vault path is not a directory"));
         }
-        
+
         let required = ["01_Projects", "02_Areas", "03_Resources", "04_Archives"];
         for dir in required {
             if !root.join(dir).is_dir() {
                 return Err(anyhow!("Missing required PARA folder: {}", dir));
             }
         }
-        
+
         Ok(Self { root })
     }
 
@@ -46,21 +46,21 @@ impl Vault {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::tempdir;
     use std::fs;
+    use tempfile::tempdir;
 
     #[test]
     fn test_vault_validation() {
         let dir = tempdir().unwrap();
         let path = dir.path();
-        
+
         assert!(Vault::new(path).is_err());
-        
+
         fs::create_dir(path.join("01_Projects")).unwrap();
         fs::create_dir(path.join("02_Areas")).unwrap();
         fs::create_dir(path.join("03_Resources")).unwrap();
         fs::create_dir(path.join("04_Archives")).unwrap();
-        
+
         assert!(Vault::new(path).is_ok());
     }
 }
