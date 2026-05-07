@@ -18,7 +18,8 @@ impl<'a> Scanner<'a> {
         for entry in WalkDir::new(&projects_dir)
             .into_iter()
             .filter_map(|e| e.ok())
-            .filter(|e| e.path().is_file() && e.path().extension().map_or(false, |ext| ext == "md"))
+            .filter(|e| e.file_type().is_file() && e.path().extension().map_or(false, |ext| ext.eq_ignore_ascii_case("md")))
+
         {
             let path = entry.path();
             let relative_path = path.strip_prefix(self.vault.root())?
