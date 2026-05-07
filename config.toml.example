@@ -1,0 +1,9 @@
+# brain-indexer Configuration Example
+
+# Set the absolute path to your Obsidian vault.
+# This allows you to run brain-indexer commands without specifying the --vault flag.
+# (Note: Support for config.toml is currently in the roadmap)
+vault_path = "/Users/username/Documents/MyBrain"
+
+# Optional: Default output format (json or text)
+# default_format = "text"
