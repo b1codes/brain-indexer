@@ -5,9 +5,10 @@
 //! wiki-links, and concatenates the result into a single markdown string.
 
 use crate::core::vault::Vault;
-use anyhow::Result;
+use anyhow::{anyhow, Context, Result};
 use regex::Regex;
 use std::collections::HashMap;
+use std::fs;
 use std::path::PathBuf;
 use walkdir::WalkDir;
 
@@ -91,8 +92,57 @@ impl LinkResolver {
     }
 }
 
-pub fn compile_project(_vault: &Vault, _target: &str) -> Result<String> {
-    unimplemented!("compile_project will be implemented in later tasks")
+/// Compile a target project note plus its first-level wiki-linked
+/// dependencies (from `02_Areas` and `03_Resources`) into a single
+/// sanitized markdown string suitable for NotebookLM ingestion.
+pub fn compile_project(vault: &Vault, target: &str) -> Result<String> {
+    let target_path = vault.root().join("01_Projects").join(format!("{target}.md"));
+    if !target_path.is_file() {
+        return Err(anyhow!(
+            "Target project '{}' not found at {}",
+            target,
+            target_path.display()
+        ));
+    }
+
+    let target_raw = fs::read_to_string(&target_path)
+        .with_context(|| format!("Failed to read target {}", target_path.display()))?;
+    let target_stripped = strip_frontmatter(&target_raw);
+
+    let resolver = LinkResolver::new(vault)?;
+
+    // Collect dependencies in first-seen order, deduped.
+    let mut seen: HashMap<String, ()> = HashMap::new();
+    let mut deps: Vec<(String, PathBuf)> = Vec::new();
+    for link in extract_links(&target_stripped) {
+        if seen.contains_key(&link) {
+            continue;
+        }
+        seen.insert(link.clone(), ());
+        if let Some(path) = resolver.resolve(&link) {
+            deps.push((link, path));
+        }
+    }
+
+    let mut out = String::new();
+    out.push_str(&format!("# {target}\n\n"));
+    out.push_str(&replace_wiki_links(&target_stripped));
+    if !out.ends_with('\n') {
+        out.push('\n');
+    }
+
+    for (name, path) in deps {
+        let raw = fs::read_to_string(&path)
+            .with_context(|| format!("Failed to read dependency {}", path.display()))?;
+        let body = replace_wiki_links(&strip_frontmatter(&raw));
+        out.push_str(&format!("\n## {name}\n\n"));
+        out.push_str(&body);
+        if !out.ends_with('\n') {
+            out.push('\n');
+        }
+    }
+
+    Ok(out)
 }
 
 #[cfg(test)]
@@ -219,5 +269,88 @@ mod tests {
             resolver.resolve("Nested"),
             Some(path.join("03_Resources/programming/Nested.md"))
         );
+    }
+
+    #[test]
+    fn compile_project_assembles_target_and_dependencies() {
+        let (_tmp, path) = make_para_vault();
+
+        fs::write(
+            path.join("01_Projects/Lyrics_Guesser.md"),
+            "---\ntitle: LG\n---\n\
+             # Overview\n\
+             Uses [[Rust Patterns]] and [[Habits|the habits doc]].\n",
+        )
+        .unwrap();
+        fs::write(
+            path.join("03_Resources/Rust Patterns.md"),
+            "---\ntags: [rust]\n---\nBody about rust patterns.",
+        )
+        .unwrap();
+        fs::write(
+            path.join("02_Areas/Habits.md"),
+            "Body about habits.",
+        )
+        .unwrap();
+
+        let vault = Vault::new(&path).unwrap();
+        let out = compile_project(&vault, "Lyrics_Guesser").unwrap();
+
+        assert!(!out.contains("title: LG"));
+        assert!(out.contains("Uses Rust Patterns and the habits doc."));
+        assert!(out.contains("# Lyrics_Guesser"));
+        assert!(out.contains("## Rust Patterns"));
+        assert!(out.contains("## Habits"));
+        assert!(out.contains("Body about rust patterns."));
+        assert!(out.contains("Body about habits."));
+        assert!(!out.contains("tags: [rust]"));
+        let rust_idx = out.find("## Rust Patterns").unwrap();
+        let habits_idx = out.find("## Habits").unwrap();
+        assert!(rust_idx < habits_idx);
+    }
+
+    #[test]
+    fn compile_project_errors_when_target_missing() {
+        let (_tmp, path) = make_para_vault();
+        let vault = Vault::new(&path).unwrap();
+        let err = compile_project(&vault, "NotThere").unwrap_err();
+        let msg = format!("{}", err);
+        assert!(
+            msg.contains("NotThere"),
+            "expected error message to name the target, got: {msg}"
+        );
+    }
+
+    #[test]
+    fn compile_project_skips_unresolved_links_silently() {
+        let (_tmp, path) = make_para_vault();
+        fs::write(
+            path.join("01_Projects/Solo.md"),
+            "# Solo\nMentions [[NeverDefined]].",
+        )
+        .unwrap();
+
+        let vault = Vault::new(&path).unwrap();
+        let out = compile_project(&vault, "Solo").unwrap();
+
+        assert!(out.contains("Mentions NeverDefined."));
+        assert!(!out.contains("## NeverDefined"));
+    }
+
+    #[test]
+    fn compile_project_deduplicates_repeated_links() {
+        let (_tmp, path) = make_para_vault();
+        fs::write(
+            path.join("01_Projects/Repeat.md"),
+            "[[Dep]] and again [[Dep]] and [[Dep|alias]].",
+        )
+        .unwrap();
+        fs::write(path.join("03_Resources/Dep.md"), "Dep body.").unwrap();
+
+        let vault = Vault::new(&path).unwrap();
+        let out = compile_project(&vault, "Repeat").unwrap();
+
+        assert_eq!(out.matches("## Dep").count(), 1);
+        assert_eq!(out.matches("Dep body.").count(), 1);
     }
 }
