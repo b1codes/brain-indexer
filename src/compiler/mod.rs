@@ -24,6 +24,20 @@ pub fn extract_links(content: &str) -> Vec<String> {
         .collect()
 }
 
+/// Flatten `[[wiki-links]]` to plain text. Aliased links keep the alias
+/// (display text); plain links keep the target name. Preserves surrounding
+/// punctuation.
+pub fn replace_wiki_links(content: &str) -> String {
+    let re = Regex::new(r"\[\[([^\[\]\|]+?)(?:\|([^\[\]]*))?\]\]").unwrap();
+    re.replace_all(content, |caps: &regex::Captures| {
+        match caps.get(2) {
+            Some(alias) => alias.as_str().trim().to_string(),
+            None => caps[1].trim().to_string(),
+        }
+    })
+    .into_owned()
+}
+
 pub fn compile_project(_vault: &Vault, _target: &str) -> Result<String> {
     unimplemented!("compile_project will be implemented in later tasks")
 }
@@ -71,5 +85,26 @@ mod tests {
     fn extract_links_preserves_order_and_duplicates() {
         let input = "[[A]] [[B]] [[A]]";
         assert_eq!(extract_links(input), vec!["A", "B", "A"]);
+    }
+
+    #[test]
+    fn replace_wiki_links_plain() {
+        assert_eq!(replace_wiki_links("See [[Foo]] now."), "See Foo now.");
+    }
+
+    #[test]
+    fn replace_wiki_links_uses_alias() {
+        assert_eq!(
+            replace_wiki_links("Refer to [[Real Target|the doc]]."),
+            "Refer to the doc."
+        );
+    }
+
+    #[test]
+    fn replace_wiki_links_handles_multiple() {
+        assert_eq!(
+            replace_wiki_links("[[A]] and [[B|bee]] and [[C]]"),
+            "A and bee and C"
+        );
     }
 }
