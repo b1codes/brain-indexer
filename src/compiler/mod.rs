@@ -353,4 +353,29 @@ mod tests {
         assert_eq!(out.matches("## Dep").count(), 1);
         assert_eq!(out.matches("Dep body.").count(), 1);
     }
+
+    #[test]
+    fn compile_project_output_is_writable_to_disk() {
+        let (_tmp, path) = make_para_vault();
+        fs::write(
+            path.join("01_Projects/Demo.md"),
+            "# Demo\nLinks to [[Helper]].",
+        )
+        .unwrap();
+        fs::write(path.join("03_Resources/Helper.md"), "Helper body.").unwrap();
+
+        let vault = Vault::new(&path).unwrap();
+        let compiled = compile_project(&vault, "Demo").unwrap();
+
+        let out_dir = path.join("out");
+        fs::create_dir(&out_dir).unwrap();
+        let out_file = out_dir.join("Demo_StudyGuide.md");
+        fs::write(&out_file, &compiled).unwrap();
+
+        let on_disk = fs::read_to_string(&out_file).unwrap();
+        assert_eq!(on_disk, compiled);
+        assert!(on_disk.contains("# Demo"));
+        assert!(on_disk.contains("## Helper"));
+        assert!(on_disk.contains("Helper body."));
+    }
 }
