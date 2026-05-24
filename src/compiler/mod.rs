@@ -7,6 +7,9 @@
 use crate::core::vault::Vault;
 use anyhow::Result;
 use regex::Regex;
+use std::collections::HashMap;
+use std::path::PathBuf;
+use walkdir::WalkDir;
 
 /// Strip a leading YAML frontmatter block (`---\n...\n---\n`) if present.
 /// Only matches at the very start of the input. Mid-document `---` lines are preserved.
@@ -36,6 +39,56 @@ pub fn replace_wiki_links(content: &str) -> String {
         }
     })
     .into_owned()
+}
+
+/// Index of resolvable note names → absolute path. Built once per `stage` run.
+pub struct LinkResolver {
+    index: HashMap<String, PathBuf>,
+}
+
+impl LinkResolver {
+    /// Walks `02_Areas` and `03_Resources` and indexes every `.md` file by
+    /// its file stem. On stem collision, the first-scanned path wins and a
+    /// warning is emitted to stderr.
+    pub fn new(vault: &Vault) -> Result<Self> {
+        let mut index: HashMap<String, PathBuf> = HashMap::new();
+        for folder in ["02_Areas", "03_Resources"] {
+            let root = vault.root().join(folder);
+            for entry in WalkDir::new(&root)
+                .into_iter()
+                .filter_map(|e| e.ok())
+                .filter(|e| {
+                    e.file_type().is_file()
+                        && e.path()
+                            .extension()
+                            .map_or(false, |ext| ext.eq_ignore_ascii_case("md"))
+                })
+            {
+                let path = entry.path().to_path_buf();
+                let stem = match path.file_stem().and_then(|s| s.to_str()) {
+                    Some(s) => s.to_string(),
+                    None => continue,
+                };
+                if let Some(existing) = index.get(&stem) {
+                    eprintln!(
+                        "warning: duplicate note name '{}'; keeping {} and ignoring {}",
+                        stem,
+                        existing.display(),
+                        path.display()
+                    );
+                    continue;
+                }
+                index.insert(stem, path);
+            }
+        }
+        Ok(Self { index })
+    }
+
+    /// Look up a wiki-link target. Returns `None` if no matching `.md` file
+    /// was found in `02_Areas` or `03_Resources`.
+    pub fn resolve(&self, name: &str) -> Option<PathBuf> {
+        self.index.get(name).cloned()
+    }
 }
 
 pub fn compile_project(_vault: &Vault, _target: &str) -> Result<String> {
@@ -105,6 +158,66 @@ mod tests {
         assert_eq!(
             replace_wiki_links("[[A]] and [[B|bee]] and [[C]]"),
             "A and bee and C"
+        );
+    }
+
+    use std::fs;
+    use tempfile::tempdir;
+
+    fn make_para_vault() -> (tempfile::TempDir, std::path::PathBuf) {
+        let dir = tempdir().unwrap();
+        let path = dir.path().to_path_buf();
+        for sub in ["01_Projects", "02_Areas", "03_Resources", "04_Archives"] {
+            fs::create_dir(path.join(sub)).unwrap();
+        }
+        (dir, path)
+    }
+
+    #[test]
+    fn link_resolver_finds_files_in_areas_and_resources() {
+        let (_tmp, path) = make_para_vault();
+        fs::write(path.join("02_Areas/Habits.md"), "x").unwrap();
+        fs::write(path.join("03_Resources/Rust Book.md"), "y").unwrap();
+
+        let vault = Vault::new(&path).unwrap();
+        let resolver = LinkResolver::new(&vault).unwrap();
+
+        assert_eq!(
+            resolver.resolve("Habits"),
+            Some(path.join("02_Areas/Habits.md"))
+        );
+        assert_eq!(
+            resolver.resolve("Rust Book"),
+            Some(path.join("03_Resources/Rust Book.md"))
+        );
+        assert_eq!(resolver.resolve("Nonexistent"), None);
+    }
+
+    #[test]
+    fn link_resolver_ignores_projects_and_archives() {
+        let (_tmp, path) = make_para_vault();
+        fs::write(path.join("01_Projects/SelfRef.md"), "x").unwrap();
+        fs::write(path.join("04_Archives/Old.md"), "y").unwrap();
+
+        let vault = Vault::new(&path).unwrap();
+        let resolver = LinkResolver::new(&vault).unwrap();
+
+        assert_eq!(resolver.resolve("SelfRef"), None);
+        assert_eq!(resolver.resolve("Old"), None);
+    }
+
+    #[test]
+    fn link_resolver_walks_nested_subdirectories() {
+        let (_tmp, path) = make_para_vault();
+        fs::create_dir(path.join("03_Resources/programming")).unwrap();
+        fs::write(path.join("03_Resources/programming/Nested.md"), "x").unwrap();
+
+        let vault = Vault::new(&path).unwrap();
+        let resolver = LinkResolver::new(&vault).unwrap();
+
+        assert_eq!(
+            resolver.resolve("Nested"),
+            Some(path.join("03_Resources/programming/Nested.md"))
         );
     }
 }
