@@ -15,6 +15,15 @@ pub fn strip_frontmatter(content: &str) -> String {
     re.replace(content, "").into_owned()
 }
 
+/// Extract wiki-link targets from the content, in document order. For
+/// aliased links (`[[Target|Alias]]`), only `Target` is returned.
+pub fn extract_links(content: &str) -> Vec<String> {
+    let re = Regex::new(r"\[\[([^\[\]\|]+?)(?:\|[^\[\]]*)?\]\]").unwrap();
+    re.captures_iter(content)
+        .map(|cap| cap[1].trim().to_string())
+        .collect()
+}
+
 pub fn compile_project(_vault: &Vault, _target: &str) -> Result<String> {
     unimplemented!("compile_project will be implemented in later tasks")
 }
@@ -39,5 +48,28 @@ mod tests {
     fn strip_frontmatter_ignores_horizontal_rule_mid_document() {
         let input = "# Body\n\n---\n\nMore text.";
         assert_eq!(strip_frontmatter(input), input);
+    }
+
+    #[test]
+    fn extract_links_finds_plain_links() {
+        let input = "See [[Note One]] and also [[Note_Two]].";
+        assert_eq!(extract_links(input), vec!["Note One", "Note_Two"]);
+    }
+
+    #[test]
+    fn extract_links_strips_alias() {
+        let input = "Refer to [[Real Target|Display Text]].";
+        assert_eq!(extract_links(input), vec!["Real Target"]);
+    }
+
+    #[test]
+    fn extract_links_returns_empty_when_none() {
+        assert!(extract_links("Just prose, no links.").is_empty());
+    }
+
+    #[test]
+    fn extract_links_preserves_order_and_duplicates() {
+        let input = "[[A]] [[B]] [[A]]";
+        assert_eq!(extract_links(input), vec!["A", "B", "A"]);
     }
 }
