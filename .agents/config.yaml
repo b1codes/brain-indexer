@@ -1,0 +1,9 @@
+active_agents:
+- CLAUDE
+- GEMINI
+clickup_list_id: null
+default_branch: null
+github_owner: null
+github_repo: null
+skillsmp_api_key: null
+upstream_repo: ''
