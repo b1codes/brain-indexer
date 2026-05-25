@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
-use brain_indexer::compiler;
-use brain_indexer::core::vault::Vault;
-use brain_indexer::scanner::Scanner;
+use brain_indexer_core::compiler;
+use brain_indexer_core::core::vault::Vault;
+use brain_indexer_core::scanner::Scanner;
 use clap::{Parser, Subcommand};
 use std::fs;
 use std::path::Path;

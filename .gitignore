@@ -30,3 +30,14 @@ CLAUDE.md
 GEMINI.md
 .gemini/
 .agents/modules/
+
+# Node dependencies & build outputs
+node_modules/
+dist/
+.pnpm-debug.log*
+
+# OS specific files
+.DS_Store
+
+# Tauri specific ignores
+src-tauri/target/
