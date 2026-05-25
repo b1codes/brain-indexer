@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-05-25T12:00:00Z",
+  "title": "Design System: Brain Indexer",
+  "extensions": {
+    "colorMeta": {
+      "primary": { "role": "primary", "displayName": "Electric Amethyst", "canonical": "oklch(60% 0.25 285)", "tonalRamp": ["#2e1065", "#4c1d95", "#5b21b6", "#6d28d9", "#7c3aed", "#8b5cf6", "#a78bfa", "#c4b5fd"] },
+      "bg-deep": { "role": "neutral", "displayName": "Obsidian Night", "canonical": "oklch(15% 0.01 285)", "tonalRamp": ["#020617", "#080c14", "#0f172a", "#1e293b", "#334155", "#475569", "#64748b", "#94a3b8"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Primary tab titles and section headers." },
+      "body": { "displayName": "Body", "purpose": "Primary content reading." }
+    },
+    "shadows": [
+      { "name": "primary-glow", "value": "0 0 15px rgba(139, 92, 246, 0.3)", "purpose": "Suggest energy behind primary elements." }
+    ],
+    "motion": [
+      { "name": "transition-fast", "value": "0.15s cubic-bezier(0.4, 0, 0.2, 1)", "purpose": "Quick state changes and feedback." }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The main call-to-action button.",
+      "html": "<button class=\"ds-btn-primary\">STAGE BUNDLE</button>",
+      "css": ".ds-btn-primary { background: #8b5cf6; color: #f8fafc; padding: 10px 16px; border-radius: 12px; font-weight: 500; border: 1px solid transparent; cursor: pointer; transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 0 15px rgba(139, 92, 246, 0.15); } .ds-btn-primary:hover { background: #7c3aed; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3); }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Lower priority actions like browsing or cancel.",
+      "html": "<button class=\"ds-btn-secondary\">Browse</button>",
+      "css": ".ds-btn-secondary { background: #1e293b; color: #f8fafc; padding: 10px 16px; border-radius: 12px; font-weight: 500; border: 1px solid rgba(255, 255, 255, 0.08); cursor: pointer; transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1); } .ds-btn-secondary:hover { background: rgba(255, 255, 255, 0.05); border-color: rgba(255, 255, 255, 0.15); transform: translateY(-1px); }"
+    },
+    {
+      "name": "Glass Panel",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "The foundational container for all panels.",
+      "html": "<div class=\"ds-glass-panel\">Content here</div>",
+      "css": ".ds-glass-panel { background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 16px; padding: 24px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5); color: #f8fafc; }"
+    },
+    {
+      "name": "Sidebar Tab",
+      "kind": "nav",
+      "description": "Navigation links in the sidebar.",
+      "html": "<button class=\"ds-sidebar-tab ds-active\"><span class=\"ds-icon\"></span>Staging Workspace</button>",
+      "css": ".ds-sidebar-tab { display: flex; align-items: center; gap: 8px; width: 100%; padding: 10px 16px; border-radius: 12px; background: transparent; border: 1px solid transparent; color: #94a3b8; cursor: pointer; transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1); text-align: left; } .ds-sidebar-tab.ds-active { background: #8b5cf6; color: #f8fafc; } .ds-sidebar-tab:hover:not(.ds-active) { background: rgba(255, 255, 255, 0.05); color: #f8fafc; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Private Archive Forge",
+    "overview": "The Brain Indexer interface is built to feel like a high-end terminal utility wrapped in a premium desktop experience. It prioritizes the \"Zero-Exposure\" security principle, using a deep, layered dark mode that suggests a secure, private vault.",
+    "keyCharacteristics": [
+      "Mechanical Density: High-information density that respects user expertise.",
+      "Glassmorphism Depth: Subtle blurs and translucent panels to create a sense of layering.",
+      "Electric Precision: Vibrant accents used sparingly but forcefully to indicate action and status."
+    ],
+    "rules": [
+      { "name": "The Ten Percent Rule", "body": "The primary Electric Amethyst accent is used on ≤10% of any given screen. Its rarity is the point; it draws the eye to the most important actions.", "section": "colors" },
+      { "name": "The Flat-By-Default Rule", "body": "Surfaces are flat at rest. Glassmorphism and glows appear only to separate distinct functional layers.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do use OKLCH for any new color derivations.",
+      "Do use monospaced fonts for any system-level feedback or logs.",
+      "Do maintain a consistent line length for documentation (65-75ch)."
+    ],
+    "donts": [
+      "Don't use border-left greater than 1px as a colored stripe on cards.",
+      "Don't use generic SaaS landing-page clichés like 'hero-metric' templates.",
+      "Don't use pure black (#000) or pure white (#fff)."
+    ]
+  }
+}

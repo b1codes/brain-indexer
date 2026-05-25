@@ -15,7 +15,9 @@ target
 
 # Local config and test vaults
 config.toml
+config.toml.example
 test_vault/
+PRODUCT.md
 
 # RustRover
 #  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
